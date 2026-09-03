@@ -24,6 +24,7 @@ export type Link = {
   icon: string;
   order: number;
   active: boolean;
+  slug?: string;
   mobileUrl?: string;
   desktopUrl?: string;
   schedule?: {
@@ -39,6 +40,17 @@ export type Click = {
   referer: string;
   ua: string;
   chosenUrl: string;
+};
+
+export type AnalyticsSnapshot = {
+  totalClicks: number;
+  links: Array<{
+    linkId: string;
+    title: string;
+    slug: string;
+    clicks: number;
+  }>;
+  days: Array<{ day: string; clicks: number }>;
 };
 
 export type StoreData = {
@@ -69,7 +81,7 @@ function normalize(input: Partial<StoreData>): StoreData {
   return {
     profile: { ...DEFAULT_DATA.profile, ...(input.profile ?? {}) },
     theme: { ...DEFAULT_DATA.theme, ...(input.theme ?? {}) },
-    links: [...(input.links ?? DEFAULT_DATA.links)].sort((a, b) => a.order - b.order),
+    links: [...(input.links ?? DEFAULT_DATA.links)].sort((left, right) => left.order - right.order),
     clicks: input.clicks ?? []
   };
 }
@@ -114,13 +126,15 @@ export class Store {
   }
 
   async upsertLink(link: Link) {
-    const idx = this.data.links.findIndex((entry) => entry.id === link.id);
-    if (idx >= 0) {
-      this.data.links[idx] = link;
+    const index = this.data.links.findIndex((entry) => entry.id === link.id);
+
+    if (index >= 0) {
+      this.data.links[index] = link;
     } else {
       this.data.links.push(link);
     }
-    this.data.links.sort((a, b) => a.order - b.order);
+
+    this.data.links.sort((left, right) => left.order - right.order);
     await this.persist();
   }
 
@@ -138,31 +152,46 @@ export class Store {
       ua,
       chosenUrl
     });
+
     if (this.data.clicks.length > 10_000) {
       this.data.clicks = this.data.clicks.slice(-10_000);
     }
+
     await this.persist();
   }
 
-  analytics() {
-    const clicksByLink = new Map<string, number>();
-    const clicksByDay = new Map<string, number>();
+  findActiveById(linkId: string): Link | undefined {
+    return this.data.links.find((entry) => entry.id === linkId && entry.active);
+  }
+
+  findActiveBySlug(slug: string): Link | undefined {
+    return this.data.links.find((entry) => entry.slug === slug && entry.active);
+  }
+
+  hasConflictingSlug(slug: string, exceptId: string): boolean {
+    return this.data.links.some((entry) => entry.id !== exceptId && entry.slug === slug);
+  }
+
+  analytics(): AnalyticsSnapshot {
+    const clicksByLink: Record<string, number> = {};
+    const clicksByDay: Record<string, number> = {};
 
     for (const click of this.data.clicks) {
-      clicksByLink.set(click.linkId, (clicksByLink.get(click.linkId) ?? 0) + 1);
+      clicksByLink[click.linkId] = (clicksByLink[click.linkId] ?? 0) + 1;
       const day = click.at.slice(0, 10);
-      clicksByDay.set(day, (clicksByDay.get(day) ?? 0) + 1);
+      clicksByDay[day] = (clicksByDay[day] ?? 0) + 1;
     }
 
     return {
       totalClicks: this.data.clicks.length,
-      links: this.data.links.map((link) => ({
-        linkId: link.id,
-        title: link.title,
-        clicks: clicksByLink.get(link.id) ?? 0
+      links: this.data.links.map((entry) => ({
+        linkId: entry.id,
+        title: entry.title,
+        slug: entry.slug ?? "",
+        clicks: clicksByLink[entry.id] ?? 0
       })),
-      days: Array.from(clicksByDay.entries())
-        .sort(([a], [b]) => (a < b ? -1 : 1))
+      days: Object.entries(clicksByDay)
+        .sort(([left], [right]) => (left < right ? -1 : 1))
         .map(([day, clicks]) => ({ day, clicks }))
     };
   }
@@ -175,8 +204,7 @@ export class Store {
 
   private async readJson(filePath: string): Promise<Partial<StoreData> | null> {
     try {
-      const raw = await readFile(filePath, "utf8");
-      return JSON.parse(raw) as Partial<StoreData>;
+      return JSON.parse(await readFile(filePath, "utf8")) as Partial<StoreData>;
     } catch {
       return null;
     }

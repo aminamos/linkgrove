@@ -12,10 +12,10 @@ function esc(value: string): string {
 export function renderHome(profile: Profile, theme: Theme, links: Link[]) {
   const cards = links
     .filter((entry) => entry.active)
-    .sort((a, b) => a.order - b.order)
+    .sort((left, right) => left.order - right.order)
     .map(
       (entry) => `
-      <a class="link-card" href="/go/${encodeURIComponent(entry.id)}" rel="noopener noreferrer">
+      <a class="link-card" href="${entry.slug ? `/s/${encodeURIComponent(entry.slug)}` : `/go/${encodeURIComponent(entry.id)}`}" rel="noopener noreferrer">
         <div class="icon">${esc(entry.icon || "↗")}</div>
         <div>
           <div class="title">${esc(entry.title)}</div>
@@ -139,7 +139,7 @@ export function renderAdmin() {
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
       padding: 18px;
     }
-    .wrap { max-width: 980px; margin: 0 auto; display: grid; gap: 14px; }
+    .wrap { max-width: 1080px; margin: 0 auto; display: grid; gap: 14px; }
     .panel {
       background: #121931;
       border: 1px solid #1e2a52;
@@ -163,13 +163,19 @@ export function renderAdmin() {
     th, td { border-bottom: 1px solid #27365f; text-align: left; padding: 8px 6px; vertical-align: top; }
     .hint { opacity: .75; font-size: 13px; }
     .top { display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 8px; }
+    .pill { display:inline-block; padding:2px 8px; border-radius:999px; background:#172449; font-size:12px; }
+    .actions { display:flex; gap:8px; flex-wrap:wrap; }
+    .actions a { color:#7dd3fc; }
   </style>
 </head>
 <body>
   <div class="wrap">
     <div class="top">
       <h1 style="margin:0">OpenLinkHub Admin</h1>
-      <a href="/" style="color:#7dd3fc">View page</a>
+      <div class="actions">
+        <a href="/" style="color:#7dd3fc">View page</a>
+        <a href="/api/analytics.csv" style="color:#7dd3fc">Download analytics CSV</a>
+      </div>
     </div>
     <div class="panel">
       <div class="row"><label>Admin token</label><input id="token" placeholder="x-admin-token"/></div>
@@ -200,32 +206,34 @@ export function renderAdmin() {
 
     <div class="panel">
       <h2 style="margin-top:0">Link</h2>
-      <div class="row two">
+      <div class="row four">
         <input id="linkId" placeholder="id (stable key)" />
+        <input id="linkSlug" placeholder="short slug (optional)" />
         <input id="linkTitle" placeholder="Title" />
+        <input id="linkIcon" placeholder="Icon" />
       </div>
       <div class="row two">
         <input id="linkUrl" placeholder="Default URL" />
         <input id="linkDescription" placeholder="Description" />
       </div>
       <div class="row four">
-        <input id="linkIcon" placeholder="Icon" />
         <input id="linkOrder" type="number" placeholder="Order" />
         <input id="linkMobile" placeholder="Mobile URL (optional)" />
         <input id="linkDesktop" placeholder="Desktop URL (optional)" />
+        <label style="display:flex;align-items:center;gap:8px"><input id="linkActive" type="checkbox" checked style="width:auto"/> Active</label>
       </div>
       <div class="row two">
         <input id="linkStart" type="number" placeholder="UTC start hour (0-23)" />
         <input id="linkEnd" type="number" placeholder="UTC end hour (0-23)" />
       </div>
-      <div class="row"><label><input id="linkActive" type="checkbox" checked style="width:auto"/> Active</label></div>
+      <div class="hint">Slug pattern: lowercase letters, digits, dashes.</div>
       <button id="saveLink">Upsert link</button>
     </div>
 
     <div class="panel">
       <h2 style="margin-top:0">Current links</h2>
       <table>
-        <thead><tr><th>ID</th><th>Title</th><th>URL</th><th>Order</th><th>Active</th><th></th></tr></thead>
+        <thead><tr><th>ID</th><th>Slug</th><th>Title</th><th>Clicks</th><th>Actions</th><th></th></tr></thead>
         <tbody id="linksTable"></tbody>
       </table>
     </div>
@@ -249,31 +257,50 @@ const api = async (path, opts = {}) => {
   return res.status === 204 ? null : res.json();
 };
 
+const clicksById = (analytics) => {
+  const table = {};
+  for (const entry of analytics.links) {
+    table[entry.linkId] = entry.clicks;
+  }
+  return table;
+};
+
 const load = async () => {
-  const data = await api('/api/profile');
-  profileTitle.value = data.profile.title;
-  profileHandle.value = data.profile.handle;
-  profileBio.value = data.profile.bio;
-  profileAvatar.value = data.profile.avatarUrl;
-  themeBg.value = data.theme.bg;
-  themeFg.value = data.theme.fg;
-  themeAccent.value = data.theme.accent;
-  themeCard.value = data.theme.card;
+  const profileData = await api('/api/profile');
+  const analyticsData = await api('/api/analytics');
+  const clickLookup = clicksById(analyticsData);
+
+  profileTitle.value = profileData.profile.title;
+  profileHandle.value = profileData.profile.handle;
+  profileBio.value = profileData.profile.bio;
+  profileAvatar.value = profileData.profile.avatarUrl;
+  themeBg.value = profileData.theme.bg;
+  themeFg.value = profileData.theme.fg;
+  themeAccent.value = profileData.theme.accent;
+  themeCard.value = profileData.theme.card;
 
   linksTable.innerHTML = '';
-  for (const link of data.links) {
+  for (const link of profileData.links) {
+    const actionUrl = link.slug ? '/s/' + encodeURIComponent(link.slug) : '/go/' + encodeURIComponent(link.id);
+    const qrUrl = '/api/qr/' + encodeURIComponent(link.id);
     const row = document.createElement('tr');
-    row.innerHTML = '<td>' + link.id + '</td><td>' + link.title + '</td><td><a href=\"' + link.url + '\" target=\"_blank\" style=\"color:#7dd3fc\">' + link.url + '</a></td><td>' + link.order + '</td><td>' + (link.active ? 'yes' : 'no') + '</td><td><button data-id=\"' + link.id + '\">Delete</button></td>';
+    row.innerHTML = '<td><span class="pill">' + link.id + '</span></td>' +
+      '<td>' + (link.slug || '') + '</td>' +
+      '<td>' + link.title + '</td>' +
+      '<td>' + (clickLookup[link.id] || 0) + '</td>' +
+      '<td><a href="' + actionUrl + '" target="_blank" style="color:#7dd3fc">Open</a> · <a href="' + qrUrl + '" target="_blank" style="color:#7dd3fc">QR</a></td>' +
+      '<td><button data-id="' + link.id + '">Delete</button></td>';
+
     row.querySelector('button').onclick = async () => {
       await api('/api/admin/links/' + encodeURIComponent(link.id), { method: 'DELETE' });
       await load();
     };
+
     linksTable.appendChild(row);
   }
 
-  const analyticsData = await api('/api/analytics');
   document.getElementById('analytics').innerHTML = '<div>Total clicks: ' + analyticsData.totalClicks + '</div>' +
-    analyticsData.links.map((x) => '<div>' + x.title + ' (' + x.linkId + '): ' + x.clicks + '</div>').join('');
+    analyticsData.links.map((x) => '<div>' + x.title + ' (' + x.linkId + (x.slug ? ' / ' + x.slug : '') + '): ' + x.clicks + '</div>').join('');
 };
 
 saveProfile.onclick = async () => {
@@ -301,6 +328,7 @@ saveLink.onclick = async () => {
     method: 'POST',
     body: JSON.stringify({
       id: linkId.value,
+      slug: linkSlug.value || undefined,
       title: linkTitle.value,
       url: linkUrl.value,
       description: linkDescription.value,
