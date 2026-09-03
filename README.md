@@ -1,8 +1,9 @@
-# OpenLinkHub
+# LinkGrove
 
-Open-source, self-hosted **link-in-bio** platform.
+Open-source, self-hosted **link-in-bio** platform with a tree-inspired name and a simple, durable setup.
+ 
+The project combines:
 
-Built to combine:
 - **LinkStack-style control**: admin UI, profile/theme editing, link management
 - **LittleLink-style simplicity**: one JSON config, static export mode
 - **Modern bio-link extras**: click analytics, CSV export, short slugs, QR code links, mobile/desktop routing, scheduled links
