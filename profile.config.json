@@ -1,0 +1,35 @@
+{
+  "profile": {
+    "title": "Amin Amos",
+    "handle": "@aminamos",
+    "bio": "Builder, archivist, internet scavenger.",
+    "avatarUrl": "https://avatars.githubusercontent.com/u/583231?v=4"
+  },
+  "theme": {
+    "bg": "#0b1020",
+    "fg": "#f8fafc",
+    "accent": "#7dd3fc",
+    "card": "#111827"
+  },
+  "links": [
+    {
+      "id": "github",
+      "title": "GitHub",
+      "url": "https://github.com/aminamos",
+      "description": "Code and experiments",
+      "icon": "🐙",
+      "order": 1,
+      "active": true
+    },
+    {
+      "id": "x",
+      "title": "X / Twitter",
+      "url": "https://x.com/aminamos",
+      "description": "Posts and live updates",
+      "icon": "𝕏",
+      "order": 2,
+      "active": true,
+      "mobileUrl": "https://mobile.x.com/aminamos"
+    }
+  ]
+}

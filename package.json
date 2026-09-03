@@ -1,0 +1,27 @@
+{
+  "name": "openlinkhub",
+  "version": "0.1.0",
+  "description": "Open-source link-in-bio with admin + analytics",
+  "main": "index.js",
+  "scripts": {
+    "test": "node --test --import tsx test/server.test.ts",
+    "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "lint": "tsc --noEmit",
+    "export:static": "node --import tsx src/export-static.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "@hono/node-server": "^2.1.1",
+    "hono": "^4.13.5",
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "@types/node": "^26.4.1",
+    "tsx": "^4.23.13",
+    "typescript": "^7.0.2"
+  }
+}
