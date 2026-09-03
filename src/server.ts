@@ -200,6 +200,6 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   const port = Number(process.env.PORT || "8787");
 
   serve({ fetch: app.fetch, port }, (info) => {
-    console.log(`OpenLinkHub listening on http://localhost:${info.port}`);
+    console.log(`LinkGrove listening on http://localhost:${info.port}`);
   });
 }

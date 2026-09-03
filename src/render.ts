@@ -117,7 +117,7 @@ export function renderHome(profile: Profile, theme: Theme, links: Link[]) {
       </div>
     </section>
     <section class="links">${cards}</section>
-    <div class="footer">Powered by OpenLinkHub · self-hosted</div>
+    <div class="footer">Powered by LinkGrove · self-hosted</div>
   </main>
 </body>
 </html>`;
@@ -129,7 +129,7 @@ export function renderAdmin() {
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>OpenLinkHub Admin</title>
+  <title>LinkGrove Admin</title>
   <style>
     * { box-sizing: border-box; }
     body {
@@ -171,7 +171,7 @@ export function renderAdmin() {
 <body>
   <div class="wrap">
     <div class="top">
-      <h1 style="margin:0">OpenLinkHub Admin</h1>
+      <h1 style="margin:0">LinkGrove Admin</h1>
       <div class="actions">
         <a href="/" style="color:#7dd3fc">View page</a>
         <a href="/api/analytics.csv" style="color:#7dd3fc">Download analytics CSV</a>

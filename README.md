@@ -75,13 +75,13 @@ Example link payload:
 Build:
 
 ```bash
-docker build -t openlinkhub .
+docker build -t linkgrove .
 ```
 
 Run:
 
 ```bash
-docker run --rm -p 8787:8787 -e ADMIN_TOKEN=change-me openlinkhub
+docker run --rm -p 8787:8787 -e ADMIN_TOKEN=change-me linkgrove
 ```
 
 Optional env:
